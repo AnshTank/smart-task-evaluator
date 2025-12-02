@@ -26,6 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let inactivityTimer: NodeJS.Timeout
+    let sessionTimeout: NodeJS.Timeout
 
     const resetTimer = () => {
       clearTimeout(inactivityTimer)
@@ -54,11 +55,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
-    // Get initial session
+    // Get initial session with timeout
+    sessionTimeout = setTimeout(() => {
+      console.warn('Session loading timeout, setting loading to false')
+      setLoading(false)
+    }, 3000) // 3 second timeout
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      clearTimeout(sessionTimeout)
       setUser(session?.user ?? null)
       setLoading(false)
       if (session?.user) resetTimer()
+    }).catch((error) => {
+      console.error('Error getting session:', error)
+      clearTimeout(sessionTimeout)
+      setLoading(false)
     })
 
     // Listen for auth changes
@@ -75,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       clearTimeout(inactivityTimer)
+      clearTimeout(sessionTimeout)
       events.forEach(event => {
         document.removeEventListener(event, handleActivity, true)
       })

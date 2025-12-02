@@ -4,77 +4,52 @@ import Link from 'next/link'
 import { ArrowRight, Code, Zap, Shield, CheckCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { User } from '@supabase/supabase-js'
 import EnhancedNavbar from '@/components/EnhancedNavbar'
+import LoadingSpinner from '@/components/LoadingSpinner'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function HomePage() {
-  const [user, setUser] = useState<User | null>(null)
+  const { user, loading: authLoading } = useAuth()
   const [userPlan, setUserPlan] = useState<string>('Free')
-  const [loading, setLoading] = useState(true)
+  const [planLoading, setPlanLoading] = useState(false)
   const [upgrading, setUpgrading] = useState(false)
 
   useEffect(() => {
-    const getUser = async () => {
-      console.log('HomePage: Getting user...')
-      const { data: { user } } = await supabase.auth.getUser()
-      console.log('HomePage: User:', user?.id, user?.email)
-      setUser(user)
+    const fetchUserPlan = async () => {
+      if (!user) {
+        setUserPlan('Free')
+        return
+      }
       
-      if (user) {
-        // Fetch user plan from database
-        console.log('HomePage: Fetching user plan...')
+      setPlanLoading(true)
+      try {
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('subscription_plan')
           .eq('id', user.id)
           .single()
         
-        console.log('HomePage: Profile data:', profile, 'Error:', error)
-        
         if (error && error.code === 'PGRST116') {
           // Profile doesn't exist, create it
-          console.log('HomePage: Creating new profile...')
           await supabase
             .from('profiles')
             .insert({ id: user.id, email: user.email!, subscription_plan: 'Free' })
           setUserPlan('Free')
         } else {
-          const plan = profile?.subscription_plan || 'Free'
-          console.log('HomePage: Setting user plan to:', plan)
-          setUserPlan(plan)
+          setUserPlan(profile?.subscription_plan || 'Free')
         }
+      } catch (error) {
+        console.error('Error fetching user plan:', error)
+        setUserPlan('Free') // Fallback to Free plan
+      } finally {
+        setPlanLoading(false)
       }
-      setLoading(false)
     }
-    getUser()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          // Fetch user plan from database
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('subscription_plan')
-            .eq('id', session.user.id)
-            .single()
-          
-          if (error && error.code === 'PGRST116') {
-            // Profile doesn't exist, create it
-            await supabase
-              .from('profiles')
-              .insert({ id: session.user.id, email: session.user.email!, subscription_plan: 'Free' })
-            setUserPlan('Free')
-          } else {
-            setUserPlan(profile?.subscription_plan || 'Free')
-          }
-        }
-        setLoading(false)
-      }
-    )
-
-    return () => subscription.unsubscribe()
-  }, [])
+    if (!authLoading) {
+      fetchUserPlan()
+    }
+  }, [user, authLoading])
 
   const refreshUserPlan = async () => {
     if (!user) return
@@ -117,15 +92,8 @@ export default function HomePage() {
       setUpgrading(false)
     }
   }
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <EnhancedNavbar />
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
-        </div>
-      </div>
-    )
+  if (authLoading) {
+    return <LoadingSpinner />
   }
 
   return (
