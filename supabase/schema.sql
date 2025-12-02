@@ -1,11 +1,12 @@
--- Enable RLS
-ALTER DATABASE postgres SET "app.jwt_secret" TO 'your-jwt-secret';
+-- JWT secret is managed by Supabase automatically
 
 -- Create profiles table
 CREATE TABLE IF NOT EXISTS profiles (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     full_name TEXT,
+    subscription_plan TEXT DEFAULT 'Free' CHECK (subscription_plan IN ('Free', 'Premium', 'Ultra Premium')),
+    subscription_status TEXT DEFAULT 'active' CHECK (subscription_status IN ('active', 'cancelled', 'expired')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { evaluateTask } from '@/lib/openai'
+import { evaluateTask } from '@/lib/gemini'
 
 export async function POST(request: NextRequest) {
+  const body = await request.json()
+  const { taskId, title, description, code } = body
+  
   try {
-    const { taskId, title, description, code } = await request.json()
 
     if (!taskId || !title || !description) {
       return NextResponse.json(
@@ -19,8 +21,8 @@ export async function POST(request: NextRequest) {
       .update({ status: 'evaluating' })
       .eq('id', taskId)
 
-    // Get AI evaluation
-    const evaluation = await evaluateTask(title, description, code)
+    // Get AI evaluation (defaulting to premium tier for paid reports)
+    const evaluation = await evaluateTask(title, description, code, 'premium')
 
     // Save evaluation to database
     const { data: evaluationData, error: evalError } = await supabase
@@ -56,8 +58,7 @@ export async function POST(request: NextRequest) {
     console.error('Evaluation error:', error)
 
     // Update task status to failed if there was an error
-    if (request.json().then(data => data.taskId)) {
-      const { taskId } = await request.json()
+    if (taskId) {
       await supabase
         .from('tasks')
         .update({ status: 'failed' })

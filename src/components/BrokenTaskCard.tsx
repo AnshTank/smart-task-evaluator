@@ -29,8 +29,8 @@ function TaskCard({ task, onDelete }: TaskCardProps) {
       <span>Status: Pending</span>
       
       {/* Bug: Missing key prop in map, potential XSS */}
-      {task.tags && task.tags.map(tag => (
-        <span dangerouslySetInnerHTML={{ __html: tag }}></span>
+      {task.tags && task.tags.map((tag: any, index: number) => (
+        <span key={index} dangerouslySetInnerHTML={{ __html: tag }}></span>
       ))}
     </div>
   )

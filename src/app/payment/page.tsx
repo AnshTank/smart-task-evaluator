@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import EnhancedNavbar from '@/components/EnhancedNavbar'
 import { CreditCard, Lock, CheckCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -11,18 +11,17 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
   
-  // Handle both evaluation IDs and plan purchases
-  const evaluationId = params.evaluationId as string
-  const planFromQuery = searchParams.get('plan')
-  const planType = planFromQuery || (evaluationId === 'demo-premium' ? 'Premium' : evaluationId === 'demo-ultra' ? 'Ultra Premium' : null)
-  const isEvaluationPayment = !planFromQuery && evaluationId !== 'demo-premium' && evaluationId !== 'demo-ultra'
-  
-  // No redirect - let payment page handle all cases
+  const planType = searchParams.get('plan') || 'Premium'
+
+  const getPrice = () => {
+    if (planType === 'Ultra Premium') return '$19.99'
+    if (planType === 'Premium') return '$4.99'
+    return '$0.00'
+  }
 
   const handlePayment = async () => {
     setLoading(true)
@@ -34,58 +33,24 @@ export default function PaymentPage() {
 
       if (!user) throw new Error('User not authenticated')
 
-      if (planType) {
-        // Update user plan in database
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ subscription_plan: planType })
-          .eq('id', user.id)
+      // Update user plan in database
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ subscription_plan: planType })
+        .eq('id', user.id)
 
-        if (updateError) throw updateError
-        
-        setSuccess(true)
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 2000)
-      } else if (isEvaluationPayment) {
-        // Update evaluation to paid status
-        const { error: updateError } = await supabase
-          .from('evaluations')
-          .update({ is_paid: true })
-          .eq('id', evaluationId)
-
-        if (updateError) throw updateError
-
-        // Create payment record
-        await supabase
-          .from('payments')
-          .insert([
-            {
-              user_id: user.id,
-              evaluation_id: evaluationId,
-              stripe_payment_id: `pi_demo_${Date.now()}`,
-              amount: 499,
-              status: 'completed'
-            }
-          ])
-
-        setSuccess(true)
-        setTimeout(() => {
-          router.push(`/evaluation/${evaluationId}`)
-        }, 2000)
-      }
+      if (updateError) throw updateError
+      
+      setSuccess(true)
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 2000)
 
     } catch (error: any) {
       setError(error.message)
     } finally {
       setLoading(false)
     }
-  }
-
-  const getPrice = () => {
-    if (planType === 'Ultra Premium') return '$19.99'
-    if (planType === 'Premium') return '$4.99'
-    return '$0.00'
   }
 
   if (success) {
@@ -96,8 +61,8 @@ export default function PaymentPage() {
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
-            <p className="text-gray-600 mb-4">{planType ? `Welcome to ${planType}!` : 'Your full report has been unlocked.'}</p>
-            <p className="text-sm text-gray-500">Redirecting...</p>
+            <p className="text-gray-600 mb-4">Welcome to {planType}!</p>
+            <p className="text-sm text-gray-500">Redirecting to dashboard...</p>
           </div>
         </div>
       </div>
@@ -111,14 +76,14 @@ export default function PaymentPage() {
       <div className="max-w-md mx-auto py-16 px-4">
         <div className="bg-white rounded-lg shadow-md p-8">
           <div className="text-center mb-6">
-            <Lock className="h-12 w-12 text-primary-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900">Unlock Full Report</h2>
-            <p className="text-gray-600 mt-2">Get detailed analysis and personalized recommendations</p>
+            <Lock className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900">Upgrade to {planType}</h2>
+            <p className="text-gray-600 mt-2">Unlock premium features and enhanced analysis</p>
           </div>
 
           <div className="border-t border-gray-200 pt-6">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-gray-700">{planType ? `${planType} Plan` : 'Full Evaluation Report'}</span>
+              <span className="text-gray-700">{planType} Plan</span>
               <span className="text-xl font-bold text-gray-900">{getPrice()}</span>
             </div>
             
@@ -135,10 +100,18 @@ export default function PaymentPage() {
                 <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
                 Performance optimization tips
               </li>
-              <li className="flex items-center">
-                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                Personalized learning recommendations
-              </li>
+              {planType === 'Ultra Premium' && (
+                <>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    Unlimited evaluations
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    Priority AI processing
+                  </li>
+                </>
+              )}
             </ul>
 
             {error && (
@@ -150,7 +123,7 @@ export default function PaymentPage() {
             <button
               onClick={handlePayment}
               disabled={loading}
-              className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+              className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
               {loading ? (
                 <>

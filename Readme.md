@@ -6,7 +6,7 @@ A production-ready AI-powered SaaS platform for evaluating coding tasks and prov
 
 - **User Authentication**: Secure signup/login with Supabase Auth
 - **Task Submission**: Submit coding tasks with descriptions and code
-- **AI Evaluation**: Get instant feedback using OpenAI GPT models
+- **AI Evaluation**: Get instant feedback using Google Gemini AI
 - **Detailed Reports**: Comprehensive analysis with strengths, weaknesses, and improvements
 - **Payment System**: Unlock full reports with Stripe integration
 - **Dashboard**: Track all submissions and evaluations
@@ -18,7 +18,7 @@ A production-ready AI-powered SaaS platform for evaluating coding tasks and prov
 - **Backend**: Next.js API Routes, Supabase
 - **Database**: PostgreSQL (Supabase)
 - **Authentication**: Supabase Auth
-- **AI Integration**: OpenAI GPT-3.5-turbo
+- **AI Integration**: Google Gemini Pro
 - **Payments**: Stripe
 - **Deployment**: Vercel
 
@@ -53,7 +53,7 @@ smart-task-evaluator/
 - Node.js 18+ 
 - npm or yarn
 - Supabase account
-- OpenAI API key
+- Google Gemini API key
 - Stripe account
 
 ### Environment Variables
@@ -66,8 +66,8 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-# OpenAI
-OPENAI_API_KEY=your_openai_api_key
+# Gemini
+GEMINI_API_KEY=your_gemini_api_key
 
 # Stripe
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
@@ -116,7 +116,7 @@ All tables have RLS enabled with policies ensuring users can only access their o
 
 ## 🤖 AI Integration
 
-The application uses OpenAI's GPT-3.5-turbo model to evaluate coding tasks. The AI provides:
+The application uses Google's Gemini Pro model to evaluate coding tasks. The AI provides:
 
 - Numerical score (0-100)
 - Strengths analysis
@@ -169,7 +169,7 @@ Run the Supabase schema to set up all required tables and policies.
 - [x] Error handling
 
 ### AI Integration ✅
-- [x] OpenAI API integration
+- [x] Google Gemini API integration
 - [x] Task evaluation logic
 - [x] Result parsing and storage
 - [x] Error handling for AI failures
